@@ -14,6 +14,7 @@ def load_config_dict(path):
     Loads the configuration file using a ConfigParser, and returns the object.
     """
     config = configparser.ConfigParser()
+    config.read('wapo_indexer/defaults.config')
     config.read(path)
 
     return config
