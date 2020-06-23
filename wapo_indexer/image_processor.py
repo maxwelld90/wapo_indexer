@@ -54,16 +54,22 @@ class ImageProcessor(object):
             delta = (datetime.datetime.now() - self.__last_access_time).seconds
             if delta < self.__access_delay:
                 time.sleep(delta)
+
+        if not os.path.exists(original_path):
+            # Attempt to read the image from the server. If this fails, return False.
+            try:
+                response = urllib.request.urlopen(url)
+                image_file = io.BytesIO(response.read())
+                # Create a PIL object from the downloaded image.
+                image = Image.open(image_file)
+                image_file.close()
+            except urllib.error.HTTPError:  # 404, server not available, etc. -- fallback to failure.
+                return False
+        else:
+            # Already previously downloaded.. so just re-use
+            image = Image.open(original_path)
         
-        # Attempt to read the image from the server. If this fails, return False.
-        try:
-            response = urllib.request.urlopen(url)
-            image_file = io.BytesIO(response.read())
-        except urllib.error.HTTPError:  # 404, server not available, etc. -- fallback to failure.
-            return False
-        
-        # Create a PIL object from the downloaded image.
-        image = Image.open(image_file)
+        print(image.size)
         image.convert('RGB')
         image.save(original_path, 'JPEG')  # Save the original image as-is.
 
@@ -71,7 +77,7 @@ class ImageProcessor(object):
             image.thumbnail(self.__thumbnail_dimensions)  # Resize to the dimensions provided for a thumbnail, and save.
             image.save(thumbnail_path, 'JPEG')
         
-        image_file.close()
+
         image.close()
 
         self.__last_access_time = datetime.datetime.now()  # Update the last access time.
