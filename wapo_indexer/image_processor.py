@@ -64,6 +64,7 @@ class ImageProcessor(object):
         
         # Create a PIL object from the downloaded image.
         image = Image.open(image_file)
+        image.convert('RGB')
         image.save(original_path, 'JPEG')  # Save the original image as-is.
 
         if self.__generate_thumbnails:
