@@ -44,7 +44,7 @@ class ImageProcessor(object):
             return False
 
         if self.__verbose:
-            print("  * Downloading image for document {doc_id}...")
+            print( f'  * Downloading image for document {doc_id} ...')
         
         original_path = os.path.join(self.__base_path, self.__original_path, f'{doc_id}_i{image_number}.jpg')
         thumbnail_path = os.path.join(self.__base_path, self.__thumbnail_path, f'{doc_id}_i{image_number}_t.jpg')

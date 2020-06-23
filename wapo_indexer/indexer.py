@@ -14,6 +14,8 @@ class Indexer(object):
     def __init__(self, config, image_processor):
         self.__config = config
         self.__verbose = config['Index']['Verbose']
+
+
         self.__image_processor = image_processor
 
         self.__docid_list = self.__get_docid_list()
@@ -31,6 +33,8 @@ class Indexer(object):
                                body=TEXT(stored=True, vector=True),
                                author_bio=TEXT(stored=True),
                                images=TEXT(stored=True))
+
+        self.print_config()
         self.__index = create_in(config['Index']['IndexPath'], self.__schema)
         self.__writer = self.__index.writer(limitmb=config.getint('Index', 'CommitMB'))
     
