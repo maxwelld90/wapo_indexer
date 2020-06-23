@@ -68,9 +68,19 @@ class ImageProcessor(object):
         else:
             # Already previously downloaded.. so just re-use
             image = Image.open(original_path)
-        
-        print(image.size)
-        image.convert('RGB')
+
+        w,h = image.size
+        print(w,h)
+
+        if w >5000 or h > 5000:
+            return False
+        image = image.resize((400, int(h/w*400)), Image.NEAREST)
+
+
+        try:
+            image.convert('RGB')
+        except:
+            pass
         image.save(original_path, 'JPEG')  # Save the original image as-is.
 
         if self.__generate_thumbnails:
