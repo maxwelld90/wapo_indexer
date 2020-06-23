@@ -2,8 +2,9 @@ import os
 import io
 import time
 import datetime
-import urllib.request
+#import urllib.request
 from PIL import Image
+import requests
 
 class ImageProcessor(object):
     """
@@ -44,8 +45,9 @@ class ImageProcessor(object):
             return False
 
         if self.__verbose:
-            print( f'  * Downloading image for document {doc_id} ...')
-        
+            print( f'  * Downloading image for document {doc_id} ...' )
+
+        tmp_path = os.path.join(self.__base_path, self.__original_path, f'{doc_id}_i{image_number}.tmp')
         original_path = os.path.join(self.__base_path, self.__original_path, f'{doc_id}_i{image_number}.jpg')
         thumbnail_path = os.path.join(self.__base_path, self.__thumbnail_path, f'{doc_id}_i{image_number}_t.jpg')
 
@@ -55,24 +57,36 @@ class ImageProcessor(object):
             if delta < self.__access_delay:
                 time.sleep(delta)
 
-        if not os.path.exists(original_path):
+        if not os.path.exists(tmp_path):
             # Attempt to read the image from the server. If this fails, return False.
             try:
-                response = urllib.request.urlopen(url)
-                image_file = io.BytesIO(response.read())
+                totalbits = 0
+                response = requests.get(url)
+                if response.status_code == 200:
+                    with open(tmp_path, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=1024):
+                            if chunk:
+                                totalbits += 1024
+                                f.write(chunk)
+                        print("Downloaded", totalbits / 1024 / 1024, "MB...")
+                #response = urllib.request.urlopen(url)
+                #image_file = io.BytesIO(response.read())
                 # Create a PIL object from the downloaded image.
-                image = Image.open(image_file)
-                image_file.close()
+                #image = Image.open(image_file)
+                #image_file.close()
             except urllib.error.HTTPError:  # 404, server not available, etc. -- fallback to failure.
                 return False
-        else:
-            # Already previously downloaded.. so just re-use
-            image = Image.open(original_path)
+
+        if not os.path.exists(tmp_path):
+            return False
+
+        image = Image.open(tmp_path)
 
         w,h = image.size
         print(w,h)
 
         if w*h > 7000000:
+            image.close()
             return False
         image = image.resize((400, int(h/w*400)), Image.NEAREST)
 
