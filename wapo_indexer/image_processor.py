@@ -72,7 +72,7 @@ class ImageProcessor(object):
         w,h = image.size
         print(w,h)
 
-        if w >5000 or h > 5000:
+        if w*h > 7000000:
             return False
         image = image.resize((400, int(h/w*400)), Image.NEAREST)
 
