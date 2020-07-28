@@ -46,8 +46,7 @@ class ImageProcessor(object):
         if not self.__enable_processing:
             return False
 
-        if self.__verbose:
-            print( f'  * Downloading image for document {doc_id} ...' )
+
 
         tmp_path = os.path.join(self.__base_path, self.__original_path, f'{doc_id}_i{image_number}.tmp')
         tmp_download_path = tmp_path + '.download'
@@ -67,6 +66,9 @@ class ImageProcessor(object):
 
         if not os.path.exists(tmp_path):
             # Attempt to read the image from the server. If this fails, return False.
+            if self.__verbose:
+                print(f'  * Downloading image for document {doc_id} ')
+
             try:
                 totalbits = 0
                 response = requests.get(url)
@@ -97,7 +99,8 @@ class ImageProcessor(object):
             return False
 
         try:
-
+            if self.__verbose:
+                print(f'  * Opening image for document {doc_id}')
             image = Image.open(tmp_path)
 
             w,h = image.size
@@ -105,6 +108,9 @@ class ImageProcessor(object):
 
             if w*h > 7000000:
                 image.close()
+                print("Image Too Big")
+                with open(tmp_download_path, 'w') as fp:
+                    fp.close()
                 return False
             image = image.resize((400, int(h/w*400)), Image.NEAREST)
 
