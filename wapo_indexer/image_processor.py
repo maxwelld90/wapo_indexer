@@ -41,6 +41,8 @@ class ImageProcessor(object):
         """
 
         """
+        return_paths = {}
+
         if not self.__enable_processing:
             return False
 
@@ -48,6 +50,7 @@ class ImageProcessor(object):
             print( f'  * Downloading image for document {doc_id} ...' )
 
         tmp_path = os.path.join(self.__base_path, self.__original_path, f'{doc_id}_i{image_number}.tmp')
+        tmp_download_path = tmp_path + '.download'
         original_path = os.path.join(self.__base_path, self.__original_path, f'{doc_id}_i{image_number}.jpg')
         thumbnail_path = os.path.join(self.__base_path, self.__thumbnail_path, f'{doc_id}_i{image_number}_t.jpg')
 
@@ -56,6 +59,11 @@ class ImageProcessor(object):
             delta = (datetime.datetime.now() - self.__last_access_time).seconds
             if delta < self.__access_delay:
                 time.sleep(delta)
+
+
+        if os.path.exists(tmp_download_path):
+            print("Previously tried to download, convert and save, but failed.", tmp_download_path)
+            return False
 
         if not os.path.exists(tmp_path):
             # Attempt to read the image from the server. If this fails, return False.
@@ -69,48 +77,61 @@ class ImageProcessor(object):
                                 totalbits += 1024
                                 f.write(chunk)
                         print("Downloaded", totalbits / 1024 / 1024, "MB...")
+                else:
+                    print("Response code not 200")
                 #response = urllib.request.urlopen(url)
                 #image_file = io.BytesIO(response.read())
                 # Create a PIL object from the downloaded image.
                 #image = Image.open(image_file)
                 #image_file.close()
-            except urllib.error.HTTPError:  # 404, server not available, etc. -- fallback to failure.
+            except:  # 404, server not available, etc. -- fallback to failure.
+                print("Download Failed: ", tmp_path)
+                with open(tmp_download_path, 'w') as fp:
+                    fp.close()
                 return False
 
         if not os.path.exists(tmp_path):
+            print("Image not downloaded: ", tmp_path)
+            with open(tmp_download_path, 'w') as fp:
+                fp.close()
             return False
-
-        image = Image.open(tmp_path)
-
-        w,h = image.size
-        print(w,h)
-
-        if w*h > 7000000:
-            image.close()
-            return False
-        image = image.resize((400, int(h/w*400)), Image.NEAREST)
-
 
         try:
+
+            image = Image.open(tmp_path)
+
+            w,h = image.size
+            print(w, h)
+
+            if w*h > 7000000:
+                image.close()
+                return False
+            image = image.resize((400, int(h/w*400)), Image.NEAREST)
+
             image.convert('RGB')
         except:
-            pass
-        image.save(original_path, 'JPEG')  # Save the original image as-is.
+            print("Image Conversion Failed")
 
-        if self.__generate_thumbnails:
-            image.thumbnail(self.__thumbnail_dimensions)  # Resize to the dimensions provided for a thumbnail, and save.
-            image.save(thumbnail_path, 'JPEG')
-        
+        try:
+            image.save(original_path, 'JPEG')  # Save the original image as-is.
 
-        image.close()
+            if self.__generate_thumbnails:
+                image.thumbnail(self.__thumbnail_dimensions)  # Resize to the dimensions provided for a thumbnail, and save.
+                image.save(thumbnail_path, 'JPEG')
 
-        self.__last_access_time = datetime.datetime.now()  # Update the last access time.
 
-        return_paths = {}
-        return_paths['original'] = os.path.join(self.__original_path, f'{doc_id}_i{image_number}.jpg')
+            image.close()
 
-        if self.__generate_thumbnails:
-            return_paths['thumbnail'] = os.path.join(self.__thumbnail_path, f'{doc_id}_i{image_number}_t.jpg')
+            self.__last_access_time = datetime.datetime.now()  # Update the last access time.
 
+
+            return_paths['original'] = os.path.join(self.__original_path, f'{doc_id}_i{image_number}.jpg')
+
+            if self.__generate_thumbnails:
+                return_paths['thumbnail'] = os.path.join(self.__thumbnail_path, f'{doc_id}_i{image_number}_t.jpg')
+        except:
+            print("Image save failed")
+            with open(tmp_download_path, 'w') as fp:
+                fp.close()
+            return False
         return return_paths
-        

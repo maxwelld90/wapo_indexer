@@ -110,13 +110,18 @@ class Indexer(object):
         if len(self.__docid_list) > 0:
             if document_dict['id'] not in self.__docid_list:
                 return False
+
+        try:
+            dt = datetime.datetime.fromtimestamp(int(str(document_dict['published_date'])[:-3])) # Conversion to DateTime from UNIX timestamp
+        except:
+            dt = None
         
         indexing_dict = {
             'doc_id': document_dict['id'],
             'article_url': document_dict['article_url'],
             'title': document_dict['title'],
             'author': document_dict['author'],
-            'published_date': datetime.datetime.fromtimestamp(int(str(document_dict['published_date'])[:-3])), # Conversion to DateTime from UNIX timestamp
+            'published_date': dt,
             'kicker': '',
             'byline': '',
             'body': '',
@@ -126,34 +131,38 @@ class Indexer(object):
         
         # Parse the contents data structure to extract the necessary details.
         for entry in document_dict['contents']:
-            if entry['type'] == 'kicker':
-                indexing_dict['kicker'] = entry['content']
 
-            if entry['type'] == 'byline':
-                indexing_dict['byline'] = entry['content']
-            
-            if entry['type'] == 'sanitized_html':
-                processed_paragraph = entry['content']
+            if entry is not None:
 
-                if keep_markup:
-                    indexing_dict['body'] = f"{indexing_dict['body']}<p>{processed_paragraph}</p>{paragraph_break}"
-                else:
-                    indexing_dict['body'] = f"{indexing_dict['body']}{processed_paragraph}{paragraph_break}"
-            
-            if entry['type'] == 'author_info':
-                indexing_dict['author_bio'] = entry['bio']
-            
-            # Process the image(s). Use the image processor to resize, save and make thumbnails if required.
-            if self.__image_processor and entry['type'] == 'image':
-                processing_response = self.__image_processor.process_image(doc_id=indexing_dict['doc_id'],
-                                                                           url=entry['imageURL'],
-                                                                           image_number=image_counter)
-                
-                if processing_response:
-                    processing_response['fullcaption'] = entry['fullcaption']
-                    indexing_dict['images'].append(processing_response)
+                if entry['type'] == 'kicker':
+                    indexing_dict['kicker'] = entry['content']
 
-                    image_counter += 1
+                if entry['type'] == 'byline':
+                    indexing_dict['byline'] = entry['content']
+
+                if entry['type'] == 'sanitized_html':
+                    processed_paragraph = entry['content']
+
+                    if keep_markup:
+                        indexing_dict['body'] = f"{indexing_dict['body']}<p>{processed_paragraph}</p>{paragraph_break}"
+                    else:
+                        indexing_dict['body'] = f"{indexing_dict['body']}{processed_paragraph}{paragraph_break}"
+
+                if entry['type'] == 'author_info':
+                    indexing_dict['author_bio'] = entry['bio']
+
+                # Process the image(s). Use the image processor to resize, save and make thumbnails if required.
+                if self.__image_processor and entry['type'] == 'image':
+                    processing_response = self.__image_processor.process_image(doc_id=indexing_dict['doc_id'],
+                                                                               url=entry['imageURL'],
+                                                                               image_number=image_counter)
+
+                    if processing_response:
+                        if 'fullcaption' in entry:
+                            processing_response['fullcaption'] = entry['fullcaption']
+                        indexing_dict['images'].append(processing_response)
+
+                        image_counter += 1
         
         if not keep_markup:  # Removes all HTML markup if the appropriate setting has been made.
             body = re.sub(self.__markup_pattern, '', body)
