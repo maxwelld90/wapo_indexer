@@ -6,6 +6,7 @@ import datetime
 from PIL import Image
 import requests
 
+
 class ImageProcessor(object):
     """
 
@@ -106,13 +107,13 @@ class ImageProcessor(object):
             w,h = image.size
             print(w, h)
 
-            if w*h > 7000000:
+            if w*h > 20000000:
                 image.close()
                 print("Image Too Big")
                 with open(tmp_download_path, 'w') as fp:
                     fp.close()
                 return False
-            image = image.resize((400, int(h/w*400)), Image.NEAREST)
+            image = image.resize((600, int(h/w*600)), Image.NEAREST)
 
             image.convert('RGB')
         except:
@@ -120,7 +121,7 @@ class ImageProcessor(object):
 
         try:
             image.save(original_path, 'JPEG')  # Save the original image as-is.
-
+            print("Image saved.")
             if self.__generate_thumbnails:
                 image.thumbnail(self.__thumbnail_dimensions)  # Resize to the dimensions provided for a thumbnail, and save.
                 image.save(thumbnail_path, 'JPEG')
@@ -141,3 +142,4 @@ class ImageProcessor(object):
                 fp.close()
             return False
         return return_paths
+
